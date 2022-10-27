@@ -2,16 +2,23 @@ package main
 
 import "strconv"
 
+var (
+	testInt    int
+	testString string
+	testInt64  int64
+)
+
 func main() {
+
 	// string到int
-	int, err := strconv.Atoi(string)
+	testInt, _ = strconv.Atoi(testString)
 
 	// string到int64
-	int64, err := strconv.ParseInt(string, 10, 64)
+	testInt64, _ = strconv.ParseInt(testString, 10, 64)
 
 	// int到string
-	string := strconv.Itoa(int)
+	testString = strconv.Itoa(testInt)
 
 	// int64到string
-	string := strconv.FormatInt(int64, 10)
+	testString = strconv.FormatInt(testInt64, 10)
 }
