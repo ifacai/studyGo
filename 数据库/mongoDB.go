@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
+	"strconv"
 	"time"
 )
 
@@ -18,7 +20,7 @@ func mongoDB() *mongo.Database {
 	port := "27017"
 	dbName := "news"
 	timeOut := 3
-	maxNum := 50
+	maxNum := 100
 	//minNum := 5
 	//uri := fmt.Sprintf("mongodb://%s:%s@%s:%s/%s?w=majority", user, password, host, port, dbName)
 	uri := fmt.Sprintf("mongodb://%s:%s/%s", host, port, dbName)
@@ -62,99 +64,361 @@ func mongoDB() *mongo.Database {
 	return client.Database(dbName)
 }
 
-func cateUrl(parent, name string) string {
-	type urlResultStruct struct {
-		Url string
+//	type indexSortListStruct struct {
+//		Title string
+//		Time  string
+//		Id    string `bson:"_id"`
+//	}
+//
+//	func indexSortList(cateUrl string) []indexSortListStruct {
+//		var (
+//			//list    = make([]map[string]string, 10)
+//			results []indexSortListStruct
+//		)
+//		findOptions := options.Find()
+//		findOptions.SetSort(map[string]int{"time": -1})
+//		findOptions.SetSkip(0)   // skip whatever you want, like `offset` clause in mysql
+//		findOptions.SetLimit(10) // like `limit` clause in mysql
+//		cur, err := mongoDB().Collection("news").Find(context.TODO(), bson.D{{"cateUrl", cateUrl}}, findOptions)
+//		if err != nil {
+//			panic(err)
+//		}
+//		if err = cur.All(context.TODO(), &results); err != nil {
+//			panic(err)
+//		}
+//		return results
+//		//for k, v := range results {
+//		//	list[k] = make(map[string]string, 10)
+//		//	list[k]["title"] = v.Title
+//		//	list[k]["time"] = v.Time
+//		//}
+//		//return list
+//	}
+
+func indexSortList(cateUrl string) []map[string]string {
+	type indexSortListStruct struct {
+		Title string
+		Time  string
+		Id    string `bson:"_id"`
 	}
 	var (
-		urlResult      urlResultStruct
-		urlExistResult urlResultStruct
-		cateUrl        string
-		addUrl         string
+		list    = make([]map[string]string, 20)
+		results []indexSortListStruct
 	)
-	filter := bson.M{
-		"parent": parent,
-		"name":   name,
-	}
-
-	err := mongoDB().Collection("cate").FindOne(context.TODO(), filter).Decode(&urlResult)
+	findOptions := options.Find()
+	findOptions.SetSort(map[string]int{"time": -1})
+	findOptions.SetSkip(0)   // skip whatever you want, like `offset` clause in mysql
+	findOptions.SetLimit(20) // like `limit` clause in mysql
+	cur, err := mongoDB().Collection("news").Find(context.TODO(), bson.D{{"cateUrl", cateUrl}}, findOptions)
 	if err != nil {
-		//没有数据 新增
-		firstPinyin := pinyin(name)
-		firstPinyin = unABCNumber(firstPinyin)
-		//check Url exist
-		checkUrlExist := mongoDB().Collection("cate").FindOne(context.TODO(), bson.M{"url": firstPinyin}).Decode(&urlExistResult)
-		if checkUrlExist != nil {
-			//没有URL 直接用
-			addUrl = firstPinyin
-		} else {
-			topPinyin := pinyin(parent)
-			addUrl = topPinyin + firstPinyin
-		}
-		_, err := mongoDB().Collection("cate").InsertOne(context.TODO(), bson.D{
-			{"parent", parent},
-			{"name", name},
-			{"url", addUrl},
-		})
-		if err != nil {
-			panic(err)
-		}
-		//fmt.Println("id:", insertCateUrl.InsertedID)
-		cateUrl = addUrl
-	} else {
-		//存在数据 直接返回
-		cateUrl = urlResult.Url
+		panic(err)
 	}
-	return cateUrl
+	if err = cur.All(context.TODO(), &results); err != nil {
+		panic(err)
+	}
+	for k, v := range results {
+		list[k] = make(map[string]string, 6)
+		newsTime, err := strconv.Atoi(v.Time)
+		if err != nil {
+			newsTime = 1666666666
+		}
+		list[k]["y"] = time.Unix(int64(newsTime), 0).Format("2006")
+		list[k]["m"] = time.Unix(int64(newsTime), 0).Format("01")
+		list[k]["d"] = time.Unix(int64(newsTime), 0).Format("02")
+		list[k]["time"] = time.Unix(int64(newsTime), 0).Format("2006-01-02 15:04:05")
+		list[k]["title"] = v.Title
+		list[k]["id"] = v.Id
+	}
+	return list
 }
 
-type source struct {
-	Source      string
-	SourceId    string
-	Parent      string
-	Logo        string
-	Description string
-	Url         string
-}
-
-func sourceUrl(sourceName, sourceId, sourceParent, sourceLogo, sourceDescription string) string {
+func findInfoById(id string) map[string]string {
+	type news struct {
+		Title       string
+		Cover       string
+		Time        string
+		CateName    string
+		CateUrl     string
+		SubCateName string
+		SubCateUrl  string
+		Tags        string
+		Source      string
+		SourceUrl   string
+		Description string
+		Content     string
+	}
 	var (
-		result         source
-		urlExistResult source
-		addUrl         string
-		sourceUrl      string
+		r    news
+		data = make(map[string]string)
 	)
-	err := mongoDB().Collection("source").FindOne(context.TODO(), bson.M{"source": sourceName}).Decode(&result)
+	objectId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		//没有数据 新增
-		fmt.Println(msg("no data", "gbg"))
-		firstPinyin := pinyin(sourceName)
-		firstPinyin = unABCNumber(firstPinyin)
-		//check Url exist
-		checkUrlExist := mongoDB().Collection("source").FindOne(context.TODO(), bson.M{"url": firstPinyin}).Decode(&urlExistResult)
-		if checkUrlExist != nil {
-			//没有URL 直接用
-			addUrl = firstPinyin
-		} else {
-			addUrl = firstPinyin + sourceId
-		}
-		insertCateUrl, err := mongoDB().Collection("source").InsertOne(context.TODO(), bson.M{
-			"status":      "1",
-			"source":      sourceName,
-			"sourceId":    sourceId,
-			"parent":      sourceParent,
-			"logo":        sourceLogo,
-			"description": sourceDescription,
-			"url":         addUrl,
-		})
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println("id:", insertCateUrl.InsertedID)
-		sourceUrl = addUrl
-	} else {
-		//存在数据 直接返回
-		sourceUrl = result.Url
+		return data
 	}
-	return sourceUrl
+	err = mongoDB().Collection("news").FindOne(context.TODO(), bson.M{"_id": objectId}).Decode(&r)
+	if err != nil {
+		fmt.Println(err)
+		return data
+	} else {
+		data["title"] = r.Title
+		data["cover"] = r.Cover
+		data["time"] = r.Time
+		data["cateName"] = r.CateName
+		data["cateUrl"] = r.CateUrl
+		data["subCateName"] = r.SubCateName
+		data["subCateUrl"] = r.SubCateUrl
+		data["tags"] = r.Tags
+		data["source"] = r.Source
+		data["sourceUrl"] = r.SourceUrl
+		data["description"] = r.Description
+		data["content"] = r.Content
+	}
+	return data
+}
+
+func allCate() (map[string]string, map[string]map[string]map[string]map[string]string) {
+	type cateStruct struct {
+		Parent string
+		Name   string
+		Url    string
+	}
+	var (
+		res    []cateStruct
+		parent = make(map[string]string)
+		child  = make(map[string]map[string]map[string]map[string]string)
+	)
+	cur, err := mongoDB().Collection("cate").Find(context.TODO(), bson.D{})
+	if err != nil {
+		panic(err)
+	}
+	if err = cur.All(context.TODO(), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		if v.Parent == "top" {
+			parent[v.Url] = v.Name
+		} else {
+			if child[v.Parent] == nil {
+				child[v.Parent] = make(map[string]map[string]map[string]string)
+			}
+			if child[v.Parent]["list"] == nil {
+				child[v.Parent]["list"] = make(map[string]map[string]string)
+			}
+			if child[v.Parent]["list"][v.Url] == nil {
+				child[v.Parent]["list"][v.Url] = make(map[string]string)
+			}
+			child[v.Parent]["list"][v.Url]["name"] = v.Name
+			child[v.Parent]["list"][v.Url]["url"] = v.Url
+		}
+	}
+	return parent, child
+}
+
+func cateName(cateParent, cateUrl string) string {
+	type cate struct {
+		Name string
+	}
+	var res cate
+	err := mongoDB().Collection("cate").FindOne(context.TODO(), bson.D{
+		{"parent", cateParent},
+		{"url", cateUrl},
+	}).Decode(&res)
+	if err != nil {
+		panic(err)
+	}
+	return res.Name
+}
+
+func cateListNews(cateType, cateUrl string) [50]map[string]string {
+	type cateListNewsStruct struct {
+		Title string
+		Cover string
+		Time  string
+		//CateName    string
+		CateUrl     string
+		SubCateName string
+		SubCateUrl  string
+		//Tags        string
+		//Source      string
+		//SourceUrl   string
+		Description string
+		Id          string `bson:"_id"`
+	}
+	var (
+		res  []cateListNewsStruct
+		list [50]map[string]string
+	)
+	findOptions := options.Find()
+	findOptions.SetSort(map[string]int{"time": -1})
+	findOptions.SetSkip(0)   // skip whatever you want, like `offset` clause in mysql
+	findOptions.SetLimit(50) // like `limit` clause in mysql
+	cur, err := mongoDB().Collection("news").Find(context.TODO(), bson.D{{cateType, cateUrl}}, findOptions)
+	if err != nil {
+		panic(err)
+	}
+	if err = cur.All(context.TODO(), &res); err != nil {
+		panic(err)
+	}
+	for k, v := range res {
+		list[k] = make(map[string]string, 11)
+		newsTime, err := strconv.Atoi(v.Time)
+		if err != nil {
+			newsTime = 1666666666
+		}
+		list[k]["title"] = v.Title
+		list[k]["cover"] = v.Cover
+		list[k]["y"] = time.Unix(int64(newsTime), 0).Format("2006")
+		list[k]["m"] = time.Unix(int64(newsTime), 0).Format("01")
+		list[k]["d"] = time.Unix(int64(newsTime), 0).Format("02")
+		list[k]["time"] = time.Unix(int64(newsTime), 0).Format("2006-01-02 15:04:05")
+		//list[k]["cateName"] = v.CateName
+		list[k]["cateUrl"] = v.CateUrl
+		list[k]["subCateName"] = v.SubCateName
+		list[k]["subCateUrl"] = v.SubCateUrl
+		//list[k]["tags"] = v.Tags
+		//list[k]["source"] = v.Source
+		//list[k]["sourceUrl"] = v.SourceUrl
+		list[k]["description"] = v.Description
+		list[k]["id"] = v.Id
+	}
+	return list
+}
+
+func newsIndexList() [100]map[string]string {
+	type cateListNewsStruct struct {
+		Title       string
+		Cover       string
+		Time        string
+		CateUrl     string
+		SubCateName string
+		SubCateUrl  string
+		Description string
+		Id          string `bson:"_id"`
+	}
+	var (
+		res  []cateListNewsStruct
+		list [100]map[string]string
+	)
+	findOptions := options.Find()
+	findOptions.SetSort(map[string]int{"time": -1})
+	findOptions.SetSkip(0)
+	findOptions.SetLimit(100)
+	cur, err := mongoDB().Collection("news").Find(context.TODO(), bson.D{}, findOptions)
+	if err != nil {
+		panic(err)
+	}
+	if err = cur.All(context.TODO(), &res); err != nil {
+		panic(err)
+	}
+	for k, v := range res {
+		list[k] = make(map[string]string, 11)
+		newsTime, err := strconv.Atoi(v.Time)
+		if err != nil {
+			newsTime = 1666666666
+		}
+		list[k]["title"] = v.Title
+		list[k]["cover"] = v.Cover
+		list[k]["y"] = time.Unix(int64(newsTime), 0).Format("2006")
+		list[k]["m"] = time.Unix(int64(newsTime), 0).Format("01")
+		list[k]["d"] = time.Unix(int64(newsTime), 0).Format("02")
+		list[k]["time"] = time.Unix(int64(newsTime), 0).Format("2006-01-02 15:04:05")
+		list[k]["cateUrl"] = v.CateUrl
+		list[k]["subCateName"] = v.SubCateName
+		list[k]["subCateUrl"] = v.SubCateUrl
+		list[k]["description"] = v.Description
+		list[k]["id"] = v.Id
+	}
+	return list
+}
+
+func newsInfoList(cateType, cateUrl string) [23]map[string]string {
+	type cateListNewsStruct struct {
+		Title string
+		Cover string
+		Time  string
+		Id    string `bson:"_id"`
+	}
+	var (
+		res  []cateListNewsStruct
+		list [23]map[string]string
+	)
+	findOptions := options.Find()
+	findOptions.SetSort(map[string]int{"time": -1})
+	findOptions.SetSkip(0)   // skip whatever you want, like `offset` clause in mysql
+	findOptions.SetLimit(23) // like `limit` clause in mysql
+	cur, err := mongoDB().Collection("news").Find(context.TODO(), bson.D{{cateType, cateUrl}}, findOptions)
+	if err != nil {
+		panic(err)
+	}
+	if err = cur.All(context.TODO(), &res); err != nil {
+		panic(err)
+	}
+	for k, v := range res {
+		list[k] = make(map[string]string, 7)
+		newsTime, err := strconv.Atoi(v.Time)
+		if err != nil {
+			newsTime = 1666666666
+		}
+		list[k]["title"] = v.Title
+		list[k]["cover"] = v.Cover
+		list[k]["y"] = time.Unix(int64(newsTime), 0).Format("2006")
+		list[k]["m"] = time.Unix(int64(newsTime), 0).Format("01")
+		list[k]["d"] = time.Unix(int64(newsTime), 0).Format("02")
+		list[k]["time"] = time.Unix(int64(newsTime), 0).Format("2006-01-02 15:04:05")
+		list[k]["id"] = v.Id
+	}
+	return list
+}
+
+func tagListNews(tag string) [50]map[string]string {
+	type cateListNewsStruct struct {
+		Title       string
+		Cover       string
+		Time        string
+		CateUrl     string
+		SubCateName string
+		SubCateUrl  string
+		Description string
+		Id          string `bson:"_id"`
+	}
+	var (
+		res  []cateListNewsStruct
+		list [50]map[string]string
+	)
+	findOptions := options.Find()
+	findOptions.SetSort(map[string]int{"time": -1})
+	findOptions.SetSkip(0)   // skip whatever you want, like `offset` clause in mysql
+	findOptions.SetLimit(50) // like `limit` clause in mysql
+	filter := bson.D{}
+	filter = append(filter, bson.E{
+		Key: "tags",
+		//i 表示不区分大小写
+		Value: bson.M{"$regex": primitive.Regex{Pattern: ".*" + tag + ".*", Options: "i"}},
+	})
+	cur, err := mongoDB().Collection("news").Find(context.TODO(), filter, findOptions)
+	if err != nil {
+		panic(err)
+	}
+	if err = cur.All(context.TODO(), &res); err != nil {
+		panic(err)
+	}
+	for k, v := range res {
+		list[k] = make(map[string]string, 11)
+		newsTime, err := strconv.Atoi(v.Time)
+		if err != nil {
+			newsTime = 1666666666
+		}
+		list[k]["title"] = v.Title
+		list[k]["cover"] = v.Cover
+		list[k]["y"] = time.Unix(int64(newsTime), 0).Format("2006")
+		list[k]["m"] = time.Unix(int64(newsTime), 0).Format("01")
+		list[k]["d"] = time.Unix(int64(newsTime), 0).Format("02")
+		list[k]["time"] = time.Unix(int64(newsTime), 0).Format("2006-01-02 15:04:05")
+		list[k]["cateUrl"] = v.CateUrl
+		list[k]["subCateName"] = v.SubCateName
+		list[k]["subCateUrl"] = v.SubCateUrl
+		list[k]["description"] = v.Description
+		list[k]["id"] = v.Id
+	}
+	return list
 }
