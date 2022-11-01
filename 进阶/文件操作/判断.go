@@ -4,6 +4,7 @@ import (
 	"os"
 )
 
+// 判断文件是否存在 存在返回true  不存在返回false
 func checkFileExist(fileFullPathAndName string) bool {
 	//true 存在 false 不存在
 	_, err := os.Stat(fileFullPathAndName)
