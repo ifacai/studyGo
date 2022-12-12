@@ -13,6 +13,6 @@ func main() {
 	p1.name = "小名"
 	p1.city = "北京"
 	p1.age = 18
-	fmt.Printf("p1=%v\n", p1)  //p1={pprof.cn 北京 18}
-	fmt.Printf("p1=%#v\n", p1) //p1=main.person{name:"小名", city:"北京", age:18}
+	fmt.Printf("p1=%v\n", p1)  
+	fmt.Printf("p1=%#v\n", p1) 
 }
