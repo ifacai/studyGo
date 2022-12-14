@@ -30,4 +30,5 @@ func main() {
 	fmt.Printf("局部变量： slice7 %v\n", slice7)
 	fmt.Printf("局部变量： slice8 %v\n", slice8)
 	fmt.Printf("局部变量： slice9 %v\n", slice9)
+	
 }
