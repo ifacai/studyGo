@@ -5,6 +5,7 @@ import (
 	"strings"
 )
 
+
 func main() {
 	s := "  需要替换的  字符串  "
 
