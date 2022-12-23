@@ -15,6 +15,8 @@ func checkFileExist(fileOrPath string) bool {
 	return true
 }
 
+
+
 func writeFile(path, fileName, content string) {
 	// path like "./html/market/"
 	var f *os.File
