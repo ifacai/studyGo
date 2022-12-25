@@ -1,5 +1,4 @@
 package main
-
 import (
 	"bufio"
 	"bytes"
@@ -136,7 +135,6 @@ func readByLine() {
 	}
 	cmd.Wait()
 }
-
 //8. 获得exit code
 
 func RunCommand(name string, args ...string) (stdout string, stderr string, exitCode int) {
