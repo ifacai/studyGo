@@ -11,6 +11,7 @@ import (
 	"syscall"
 )
 
+
 func main() {
 
 	//1. 执行命令并获得输出结果
