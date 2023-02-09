@@ -6,3 +6,7 @@ Quickly learn go, and record some commonly used and convenient functions by cate
 你可以在分类里快速筛选出想要的方法
 
 You can quickly filter out the desired method in the category
+
+## Thanks
+
+[Jetbrains.com OpenSourceSupport](https://jb.gg/OpenSourceSupport)
