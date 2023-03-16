@@ -1,3 +1,5 @@
+package main
+
 func msg(content, color string) string {
 	var startColorString string
 	switch color {
