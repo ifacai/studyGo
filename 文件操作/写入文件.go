@@ -6,6 +6,7 @@ import (
 	"os"
 )
 
+
 func checkFileExist(fileOrPath string) bool {
 	//true 存在 false 不存在
 	_, err := os.Stat(fileOrPath)
