@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+// curlGet  请求网址
 func curlGet(inputUrl string) []byte {
 	//tr := &http.Transport{
 	//	IdleConnTimeout: 60 * time.Second,
