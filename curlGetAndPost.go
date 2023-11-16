@@ -24,6 +24,7 @@ func curlGet(inputUrl string) []byte {
 	//		Host: "ip:port",
 	//	}),
 	//	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	// 跳过证书
 	//}
 	client := &http.Client{
 		//Transport: tr,
